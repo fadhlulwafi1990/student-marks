@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Carry Mark Portal</title>
+    
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <!-- Load Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Load FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Merriweather', 'serif'],
+                    },
+                    colors: {
+                        university: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            600: '#2563eb',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans text-slate-800 flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8">
+
+    <div class="w-full max-w-2xl">
+        
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-university-100 text-university-800 mb-4 shadow-sm">
+                <i class="fa-solid fa-graduation-cap text-3xl"></i>
+            </div>
+            <h1 class="text-3xl font-serif text-university-900 mb-2">Student Portal</h1>
+            <p class="text-slate-500 font-medium">Check Your Course Carry Marks</p>
+        </header>
+
+        <!-- Search Card -->
+        <div class="glass-panel rounded-2xl shadow-xl border border-slate-200 overflow-hidden mb-8 transition-all duration-300">
+            <div class="bg-university-800 px-6 py-4 border-b border-university-900">
+                <h2 class="text-white font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass text-university-100"></i>
+                    Mark Enquiry
+                </h2>
+            </div>
+            
+            <div class="p-6 sm:p-8">
+                <form id="searchForm" class="space-y-6">
+                    <div>
+                        <label for="matrixNumber" class="block text-sm font-medium text-slate-700 mb-1">Matrix / Student ID Number</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-regular fa-id-badge text-slate-400"></i>
+                            </div>
+                            <input type="text" id="matrixNumber" name="matrixNumber" required
+                                class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg focus:ring-university-600 focus:border-university-600 sm:text-sm transition-colors uppercase"
+                                placeholder="e.g., A1234567">
+                        </div>
+                        <p class="mt-2 text-xs text-slate-500">Enter your official university matrix number to securely retrieve your marks.</p>
+                    </div>
+
+                    <button type="submit" id="submitBtn"
+                        class="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-university-600 hover:bg-university-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-university-600 transition-colors">
+                        <span>Check Marks</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <!-- Results Area (Hidden by default) -->
+                <div id="resultContainer" class="hidden mt-8 pt-6 border-t border-slate-100 animate-[fadeIn_0.3s_ease-in-out]">
+                    
+                    <!-- Loading State -->
+                    <div id="loadingState" class="hidden flex flex-col items-center justify-center py-4 text-slate-500">
+                        <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3 text-university-600"></i>
+                        <p>Searching database...</p>
+                    </div>
+
+                    <!-- Success State -->
+                    <div id="successState" class="hidden bg-green-50 rounded-xl p-6 border border-green-100">
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0 mt-1">
+                                <i class="fa-solid fa-circle-check text-green-500 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-sm font-medium text-green-800 uppercase tracking-wider mb-1">Record Found</h3>
+                                <div class="mt-2 grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-xs text-slate-500">Matrix No.</p>
+                                        <p id="resMatrix" class="font-semibold text-slate-800 uppercase">-</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-slate-500">Name</p>
+                                        <p id="resName" class="font-semibold text-slate-800">-</p>
+                                    </div>
+                                    <div class="col-span-2 bg-white rounded-lg p-4 border border-green-200 mt-2 flex justify-between items-center shadow-sm">
+                                        <span class="font-medium text-slate-600">Total Carry Mark</span>
+                                        <span id="resMark" class="text-3xl font-bold text-university-800">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="errorState" class="hidden bg-red-50 rounded-xl p-5 border border-red-100 flex items-start gap-3">
+                        <i class="fa-solid fa-circle-exclamation text-red-500 mt-0.5"></i>
+                        <div>
+                            <h3 class="text-sm font-medium text-red-800">Record Not Found</h3>
+                            <p id="errorMessage" class="text-sm text-red-600 mt-1">We couldn't find any marks associated with that matrix number. Please check your input and try again.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Info Panel (Can be removed in production) -->
+        <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden text-sm [&_summary::-webkit-details-marker]:hidden">
+            <summary class="cursor-pointer bg-slate-50 px-5 py-4 font-medium text-slate-700 flex justify-between items-center hover:bg-slate-100 transition-colors">
+                <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-slate-400"></i>
+                    Teacher / Admin Setup Guide
+                </span>
+                <i class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 group-open:rotate-180"></i>
+            </summary>
+            <div class="p-5 border-t border-slate-200 text-slate-600 space-y-4">
+                <p>To use live data from OneDrive instead of the mock fallback, follow these steps:</p>
+                <ol class="list-decimal list-inside space-y-2 ml-1">
+                    <li>Create an Excel file with columns: <strong>Matrix</strong>, <strong>Name</strong>, and <strong>Mark</strong>.</li>
+                    <li>Save it as a <strong>CSV (Comma delimited)</strong> file in your OneDrive.</li>
+                    <li>Right-click the CSV in OneDrive online and click <strong>Embed</strong> (or generate a sharing link).</li>
+                    <li>Extract the direct download URL. A standard OneDrive link looks like this:<br>
+                        <code class="block bg-slate-100 p-2 rounded mt-1 text-xs break-all">https://onedrive.live.com/download?cid=YOUR_CID&resid=YOUR_RESID&authkey=YOUR_AUTHKEY</code>
+                    </li>
+                    <li>Paste that URL into the <code>ONEDRIVE_CSV_URL</code> variable in the JavaScript section of this file.</li>
+                </ol>
+                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 flex gap-2 items-start mt-4">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+                    <p class="text-xs text-amber-800">
+                        <strong>Important:</strong> Browsers block cross-origin requests (CORS). Direct links to OneDrive often fail in pure client-side JavaScript. If the live link fails, this app will automatically fall back to the built-in <code>MOCK_DATA</code> so the UI keeps working. For a robust production setup, consider publishing a Google Sheet to Web (CSV format) which has better CORS support, or host the CSV on the same domain as this HTML file.
+                    </p>
+                </div>
+            </div>
+        </details>
+        
+        <footer class="mt-8 text-center text-xs text-slate-400">
+            <p>&copy; 2026 Academic Department. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        /**
+         * ==========================================
+         * CONFIGURATION
+         * ==========================================
+         */
+        
+        // PASTE YOUR ONEDRIVE DIRECT DOWNLOAD LINK HERE
+        // It MUST be a direct download link (e.g., ends in ?download=1 or similar format).
+        // Standard sharing links (e.g., 1drv.ms/...) return HTML, not CSV, and will fail.
+        const ONEDRIVE_CSV_URL = ""; 
+
+        // MOCK DATA FALLBACK
+        // This is used if the OneDrive link is empty or if the browser blocks the request due to CORS.
+        const MOCK_DATA = [
+            { Matrix: "A1001", Name: "Ahmad Albab", Mark: "35/40" },
+            { Matrix: "A1002", Name: "Sarah Connor", Mark: "38/40" },
+            { Matrix: "A1003", Name: "John Doe", Mark: "29/40" },
+            { Matrix: "B2050", Name: "Siti Nurhaliza", Mark: "40/40" },
+            { Matrix: "C9999", Name: "Test Student", Mark: "12/40" }
+        ];
+
+        /**
+         * ==========================================
+         * DOM ELEMENTS & EVENT LISTENERS
+         * ==========================================
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('searchForm');
+            const input = document.getElementById('matrixNumber');
+            const resultContainer = document.getElementById('resultContainer');
+            
+            const loadingState = document.getElementById('loadingState');
+            const successState = document.getElementById('successState');
+            const errorState = document.getElementById('errorState');
+            const errorMessage = document.getElementById('errorMessage');
+
+            // Result Fields
+            const resMatrix = document.getElementById('resMatrix');
+            const resName = document.getElementById('resName');
+            const resMark = document.getElementById('resMark');
+
+            // Detail toggle animation logic
+            const details = document.querySelector('details');
+            const summaryIcon = details.querySelector('summary i.fa-chevron-down');
+            details.addEventListener('toggle', (e) => {
+                if (details.open) {
+                    summaryIcon.classList.add('rotate-180');
+                } else {
+                    summaryIcon.classList.remove('rotate-180');
+                }
+            });
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const query = input.value.trim().toUpperCase();
+                
+                if (!query) return;
+
+                // Reset UI
+                hideAllStates();
+                resultContainer.classList.remove('hidden');
+                loadingState.classList.remove('hidden');
+                
+                try {
+                    let dataToSearch = [];
+
+                    // Attempt to fetch from URL if provided
+                    if (ONEDRIVE_CSV_URL) {
+                        try {
+                            const response = await fetch(ONEDRIVE_CSV_URL);
+                            if (!response.ok) throw new Error("Network response was not ok");
+                            const csvText = await response.text();
+                            
+                            // Parse CSV text using PapaParse
+                            const parsed = Papa.parse(csvText, {
+                                header: true,
+                                skipEmptyLines: true
+                            });
+                            dataToSearch = parsed.data;
+                            console.log("Data loaded from OneDrive URL.");
+                        } catch (fetchError) {
+                            console.warn("Failed to fetch from OneDrive (likely CORS or invalid link). Using mock data fallback.", fetchError);
+                            dataToSearch = MOCK_DATA;
+                        }
+                    } else {
+                        // Use mock data if no URL is provided
+                        dataToSearch = MOCK_DATA;
+                    }
+
+                    // Simulate slight network delay for better UX (makes it feel like it's querying a db)
+                    await new Promise(r => setTimeout(r, 600));
+
+                    // Perform Search
+                    // Assuming columns are named 'Matrix', 'Name', 'Mark' (case-insensitive keys handled below)
+                    const foundRecord = dataToSearch.find(row => {
+                        // Find the key that represents the Matrix number (allowing for slight header variations)
+                        const matrixKey = Object.keys(row).find(key => key.toLowerCase().includes('matrix') || key.toLowerCase().includes('id'));
+                        if (matrixKey && row[matrixKey]) {
+                            return row[matrixKey].toString().trim().toUpperCase() === query;
+                        }
+                        return false;
+                    });
+
+                    // Update UI based on result
+                    hideAllStates();
+                    
+                    if (foundRecord) {
+                        // Try to find matching columns dynamically in case headers differ slightly
+                        const keys = Object.keys(foundRecord);
+                        const matrixKey = keys.find(k => k.toLowerCase().includes('matrix') || k.toLowerCase().includes('id')) || keys[0];
+                        const nameKey = keys.find(k => k.toLowerCase().includes('name')) || keys[1];
+                        const markKey = keys.find(k => k.toLowerCase().includes('mark')) || keys[2];
+
+                        resMatrix.textContent = foundRecord[matrixKey] || query;
+                        resName.textContent = foundRecord[nameKey] || 'N/A';
+                        resMark.textContent = foundRecord[markKey] || 'N/A';
+                        
+                        successState.classList.remove('hidden');
+                    } else {
+                        errorMessage.textContent = `No marks found for matrix number "${query}".`;
+                        errorState.classList.remove('hidden');
+                    }
+
+                } catch (error) {
+                    hideAllStates();
+                    errorMessage.textContent = "An error occurred while processing the data.";
+                    errorState.classList.remove('hidden');
+                    console.error("Search error:", error);
+                }
+            });
+
+            // Helper function to manage UI states
+            function hideAllStates() {
+                loadingState.classList.add('hidden');
+                successState.classList.add('hidden');
+                errorState.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
